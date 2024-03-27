@@ -22,23 +22,32 @@ class BLEInterface:
 
         :param communication_address: communication address of the Bluetooth device we want to connect with
         """
+        self.communication_address = communication_address
+        self.loop = None
+        self.connection = None
+
+    def found_device(self):
         devices = asyncio.run(BleakScanner.discover())
         device_list = [d.address for d in devices]
         print(device_list)
-        if communication_address in device_list:
-            print('Found Device.')
-            self.loop = asyncio.new_event_loop()
-            # Establish the Bluetooth connection and keep the object reference for further use
-            try:
-                self.connection = self.loop.run_until_complete(self.establish_connection(communication_address))
-            except:
-                print('Failed to connect. Hit reset on the device.')
-                self.loop = None
-                self.connection = None
+        if self.communication_address in device_list:
+            return True
         else:
             self.loop = None
             self.connection = None
-            print('Device not found')
+            return False
+
+    def setup_connection(self):
+        self.loop = asyncio.new_event_loop()
+        # Establish the Bluetooth connection and keep the object reference for further use
+        try:
+            self.connection = self.loop.run_until_complete(self.establish_connection(self.communication_address))
+            return True
+        except:
+            print('Failed to connect. Hit reset on the device.')
+            self.loop = None
+            self.connection = None
+            return False
 
     def on_incoming_bth_message(self, sender: int, data: bytearray) -> None:
         value = array.array('h', data)
@@ -62,10 +71,6 @@ class BLEInterface:
         # Set on disconnect callback
         client.set_disconnected_callback(self.on_bth_disconnect)
         print('Connection successfully established!')
-        # Obtain characteric
-        #char_handler = client.services.characteristics[11]
-        # Setup callback
-        #asyncio.create_task(client.start_notify(char_handler, self.on_incoming_bth_message))
         return client
 
     def read_gatt(self):
@@ -114,7 +119,12 @@ class BLEInterface:
 if __name__ == '__main__':
     ble_interface = BLEInterface("F4:12:FA:5A:81:D1")
     try:
-        df_signal = ble_interface.read_gatt()
+        bool_found = ble_interface.found_device()
+        if bool_found:
+            bool_connect = ble_interface.setup_connection()
+            if bool_connect:
+                df_signal = ble_interface.read_gatt()
+                print(df_signal)
     except:
         print('Failed to read')
     ble_interface.close_connection()
