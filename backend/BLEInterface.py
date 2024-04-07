@@ -81,14 +81,14 @@ class BLEInterface:
         """
         # Characteristic handler (int)
         char_handler = self.connection.services.characteristics[14]
-        # Result from streaming data (byte array)
-        result = asyncio.run(self.connection.read_gatt_char(char_handler))
+        # Result from streaming data (byte array) utilizing existing loop
+        result = self.loop.run_until_complete(self.connection.read_gatt_char(char_handler))
         # Convert byte array to short little endian
         value = array.array('h', result)
         # Convert short little endian to float
         signal = float(value[0] + value[1])
         # Prevent overflow
-        time.sleep(0.01)
+        time.sleep(0.00001)
         # Retrieve time when signal arrives
         now = datetime.datetime.now()
         data_now = {'Time_sec': now, 'Signal': signal}
